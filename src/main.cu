@@ -26,7 +26,7 @@ void test_sort_algorithm(const char* name, void(*sort_func)(int*, int), const st
 
 int main() {
     // array sizes to test
-    std::vector<int> sizes = {1 << 16, 1 << 20, 1 << 24, 1 << 28};
+    std::vector<int> sizes = {1 << 20, 1 << 24, 1 << 28};
 
     for (auto n : sizes) {
         std::cout << "\nCreating array of size " << n << "\n";

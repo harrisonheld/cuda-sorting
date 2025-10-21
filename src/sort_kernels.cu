@@ -8,21 +8,21 @@ void cpu_sort(int* arr, int n) {
 }
 
 void merge_sort(int* arr, int n) {
-    std::sort(arr, arr + n); // TODO
+    return; // TODO
 }
 
 void quick_sort(int* arr, int n) {
-    std::sort(arr, arr + n); // TODO
+    return; // TODO
 }
 
 void radix_sort(int* arr, int n) {
-    std::sort(arr, arr + n); // TODO
+    return; // TODO
 }
 
 void bitonic_sort(int* arr, int n) {
-    std::sort(arr, arr + n); // TODO
+    return; // TODO
 }
 
 void brick_sort(int* arr, int n) {
-    std::sort(arr, arr + n); // TODO
+    return; // TODO
 }
