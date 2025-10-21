@@ -3,6 +3,10 @@
 #include <algorithm>
 #include <iostream>
 
+void cpu_sort(int* arr, int n) {
+    std::sort(arr, arr + n);
+}
+
 void merge_sort(int* arr, int n) {
     std::sort(arr, arr + n); // TODO
 }

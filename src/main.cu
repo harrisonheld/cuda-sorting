@@ -30,6 +30,7 @@ int main() {
     test_sort("Radix Sort", radix_sort);
     test_sort("Bitonic Sort", bitonic_sort);
     test_sort("Brick Sort", brick_sort);
+    test_sort("CPU Sort", cpu_sort);
 
     delete[] copy;
     return 0;
