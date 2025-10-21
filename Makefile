@@ -1,19 +1,29 @@
-CUDA_PATH       := /usr
-NVCC            := $(CUDA_PATH)/bin/nvcc
-SRC_DIR         := src
-BIN_DIR         := bin
+NVCC = nvcc
+CFLAGS = -O3 -std=c++17
 
-TARGET          := $(BIN_DIR)/vector_add
-SRC             := $(SRC_DIR)/vector_add.cu
+SRC = src
+INC = include
+BIN = bin
+TARGET = $(BIN)/cuda_sort
+
+SOURCES = $(wildcard $(SRC)/*.cu)
+OBJECTS = $(SOURCES:$(SRC)/%.cu=$(BIN)/%.o)
 
 all: $(TARGET)
 
-$(TARGET): $(SRC)
-	mkdir -p $(BIN_DIR)
-	$(NVCC) $(SRC) -o $(TARGET)
+$(BIN):
+	mkdir -p $(BIN)
+
+# Compile
+$(BIN)/%.o: $(SRC)/%.cu | $(BIN)
+	$(NVCC) $(CFLAGS) -I$(INC) -c $< -o $@
+
+# Link
+$(TARGET): $(OBJECTS) | $(BIN)
+	$(NVCC) $(CFLAGS) $^ -o $@
+
+run: $(TARGET)
+	./$(TARGET)
 
 clean:
-	rm -rf $(BIN_DIR)
-
-run: all
-	./$(TARGET)
+	rm -rf $(BIN)/*
