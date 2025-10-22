@@ -9,7 +9,17 @@ void print_array(int* arr, int n) {
     std::cout << "\n";
 }
 
-void test_sort_algorithm(const char* name, void(*sort_func)(int*, int), const std::vector<int>& arr) {
+bool is_sorted(const int* arr, int n, int samples = 1000) {
+    std::srand(std::time(nullptr));
+    for (int s = 0; s < samples; ++s) {
+        int i = std::rand() % (n - 1); // random index
+        if (arr[i] > arr[i + 1])
+            return false; // definitely not sorted
+    }
+    return true; // probably sorted
+}
+
+void test_sort_algorithm(const char* name, void(*sort_func)(int*, size_t), const std::vector<int>& arr) {
     int* copy = new int[arr.size()];
     std::copy(arr.begin(), arr.end(), copy);
 
@@ -18,15 +28,18 @@ void test_sort_algorithm(const char* name, void(*sort_func)(int*, int), const st
     auto end = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double> diff = end - start;
+
+    bool correct = is_sorted(copy, arr.size());
     std::cout << name << " took " << diff.count() 
-              << "s to sort " << arr.size() << " elements.\n";
+              << "s to sort " << arr.size() 
+              << " elements. " << (correct ? "" : "[FAIL]") << "\n";
 
     delete[] copy;
 }
 
 int main() {
     // array sizes to test
-    std::vector<int> sizes = {1 << 20, 1 << 24, 1 << 28};
+    std::vector<int> sizes = {1 << 12, 1 << 16, 1 << 20, 1 << 24, 1 << 28};
 
     for (auto n : sizes) {
         std::cout << "\nCreating array of size " << n << "\n";
