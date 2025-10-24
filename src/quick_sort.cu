@@ -36,6 +36,7 @@ __global__ void three_way_partition_kernel(int* arr, int low, int high, int pivo
     *d_q = q;
 }
 
+// expect O(n) time
 void quick_sort(int* arr, size_t n) {
     if (n < 2)
         return;

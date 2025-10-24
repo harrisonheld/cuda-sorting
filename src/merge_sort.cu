@@ -21,6 +21,7 @@ __global__ void merge_kernel(int* A, int* B, size_t width, size_t n) {
     while (j < high) B[k++] = A[j++];
 }
 
+// O(1) + O(log n) time
 void merge_sort(int* A, size_t n) {
     int* d_A;
     int* d_B;
