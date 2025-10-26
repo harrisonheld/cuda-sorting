@@ -30,19 +30,21 @@ void test_sort_algorithm(const char* name, void(*sort_func)(int*, size_t), const
     std::chrono::duration<double> diff = end - start;
 
     bool correct = is_sorted(copy, arr.size());
-    std::cout << name << " took " << diff.count() 
-              << "s to sort " << arr.size() 
-              << " elements. " << (correct ? "" : "[FAIL]") << "\n";
+
+    // CSV output: size,algorithm,time,correct
+    std::cout << arr.size() << ",\"" << name << "\"," << diff.count() 
+              << "," << (correct ? "PASS" : "FAIL") << "\n";
 
     delete[] copy;
 }
 
 int main() {
-    // array sizes to test
+    // print csv header
+    std::cout << "Size,Algorithm,Time(s),Result\n";
+
     std::vector<int> sizes = {1 << 12, 1<< 14, 1 << 16, 1 << 18,1 << 20, 1 << 22, 1 << 24, 1 << 26, 1 << 28};
 
     for (auto n : sizes) {
-        std::cout << "\nCreating array of size " << n << "\n";
         std::vector<int> arr(n);
         for (int i = 0; i < n; ++i) 
             arr[i] = rand() % 100000;
