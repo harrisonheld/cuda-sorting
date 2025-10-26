@@ -39,7 +39,7 @@ void test_sort_algorithm(const char* name, void(*sort_func)(int*, size_t), const
 
 int main() {
     // array sizes to test
-    std::vector<int> sizes = {1 << 12, 1<< 14, 1 << 16, 1 << 18,1 << 20, 1 << 22, 1 << 24};
+    std::vector<int> sizes = {1 << 12, 1<< 14, 1 << 16, 1 << 18,1 << 20, 1 << 22, 1 << 24, 1 << 26, 1 << 28};
 
     for (auto n : sizes) {
         std::cout << "\nCreating array of size " << n << "\n";
@@ -49,9 +49,9 @@ int main() {
 
         // test_sort_algorithm("CPU std::sort", cpu_sort, arr);
         // test_sort_algorithm("Merge Sort", merge_sort, arr);
-        test_sort_algorithm("Quick Sort", quick_sort, arr);
+        // test_sort_algorithm("Quick Sort", quick_sort, arr);
         // test_sort_algorithm("Radix Sort", radix_sort, arr);
-        // test_sort_algorithm("Bitonic Sort", bitonic_sort, arr);
+        test_sort_algorithm("Bitonic Sort", bitonic_sort, arr);
         // test_sort_algorithm("Brick Sort", brick_sort, arr);
     }
 
