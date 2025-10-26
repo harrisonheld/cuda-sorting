@@ -24,7 +24,8 @@ __global__ void bitonic_kernel(int* A, int n, int j, int k) {
     }
 }
 
-// O(n log^2 n) time
+// O(log^2 n) time
+// O(n log^2 n) work
 void bitonic_sort(int* arr, size_t n) {
     // n must be a power of 2!!
     // all our test cases will be powers of 2

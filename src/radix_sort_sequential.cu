@@ -2,6 +2,7 @@
 #include <vector>
 #include <algorithm>
 
+// expect O(n) time
 void radix_sort_sequential(int* arr, size_t n) {
     int max_val = *std::max_element(arr, arr + n);
 
