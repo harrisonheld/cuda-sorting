@@ -47,13 +47,13 @@ int main() {
         for (int i = 0; i < n; ++i) 
             arr[i] = rand() % 100000;
 
-        // test_sort_algorithm("CPU std::sort", cpu_sort, arr);
-        // test_sort_algorithm("Merge Sort", merge_sort, arr);
-        // test_sort_algorithm("Quick Sort", quick_sort, arr);
+        test_sort_algorithm("CPU std::sort", cpu_sort, arr);
+        test_sort_algorithm("Merge Sort", merge_sort, arr);
+        test_sort_algorithm("Quick Sort", quick_sort, arr);
         test_sort_algorithm("Radix Sort Sequential", radix_sort_sequential, arr);
-        test_sort_algorithm("Radix Sort Parallel", radix_sort_parallel, arr);
-        // test_sort_algorithm("Bitonic Sort", bitonic_sort, arr);
-        // test_sort_algorithm("Brick Sort", brick_sort, arr);
+        // test_sort_algorithm("Radix Sort Parallel", radix_sort_parallel, arr);
+        test_sort_algorithm("Bitonic Sort", bitonic_sort, arr);
+        test_sort_algorithm("Brick Sort", brick_sort, arr);
     }
 
     return 0;
