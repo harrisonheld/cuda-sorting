@@ -4,8 +4,6 @@
 #include <utility>
 #include <iostream>
 
-#define BLOCK_SIZE 256
-
 __device__ inline void swap(int &a, int &b) {
     int tmp = a;
     a = b;
