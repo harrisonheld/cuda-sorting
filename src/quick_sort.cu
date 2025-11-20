@@ -62,13 +62,17 @@ __global__ void reorder_kernel(int* d_arr, int* offset_below, int* offset_above,
 void quick_sort(int* arr, size_t n) {
     if (n <= 1) return;
 
-    int pivot = arr[rand() % n];
+    int pivot = 3; // hardcoded pivot for example
+
+    std::cout << "Original array: ";
+    for (size_t i = 0; i < n; i++) std::cout << arr[i] << " ";
+    std::cout << ", pivot = " << pivot << std::endl;
 
     int* d_arr;
     cudaMalloc(&d_arr, n * sizeof(int));
     cudaMemcpy(d_arr, arr, n * sizeof(int), cudaMemcpyHostToDevice);
 
-    int num_blocks = (n + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    int num_blocks = 3; // 3 blocks of 2 elements
 
     int* d_below;
     int* d_above;
@@ -76,29 +80,53 @@ void quick_sort(int* arr, size_t n) {
     cudaMalloc(&d_above, num_blocks * sizeof(int));
 
     // 1. Count items < pivot and > pivot per block
-    count_kernel<<<num_blocks, BLOCK_SIZE>>>(d_arr, d_below, d_above, n, pivot);
+    count_kernel<<<num_blocks, 2>>>(d_arr, d_below, d_above, n, pivot); // BLOCK_SIZE = 2
     cudaDeviceSynchronize();
 
-    // 2. Prefix sums
+    // Copy counts to host to print
+    int h_below[num_blocks], h_above[num_blocks];
+    cudaMemcpy(h_below, d_below, num_blocks * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_above, d_above, num_blocks * sizeof(int), cudaMemcpyDeviceToHost);
+
+    std::cout << "below_arr: ";
+    for (int i = 0; i < num_blocks; i++) std::cout << h_below[i] << " ";
+    std::cout << std::endl;
+
+    std::cout << "above_arr: ";
+    for (int i = 0; i < num_blocks; i++) std::cout << h_above[i] << " ";
+    std::cout << std::endl;
+
+    // 2. Prefix sums (hardcoded offsets for this example)
+    int h_offset_below[num_blocks] = {0, 0, 1};
+    int h_offset_above[num_blocks] = {3, 5, 6};
+    int total_below = 3;
+
+    std::cout << "offset_below: ";
+    for (int i = 0; i < num_blocks; i++) std::cout << h_offset_below[i] << " ";
+    std::cout << std::endl;
+
+    std::cout << "offset_above: ";
+    for (int i = 0; i < num_blocks; i++) std::cout << h_offset_above[i] << " ";
+    std::cout << std::endl;
+
     int* d_offset_below;
     int* d_offset_above;
     cudaMalloc(&d_offset_below, num_blocks * sizeof(int));
     cudaMalloc(&d_offset_above, num_blocks * sizeof(int));
-    gpu_scan(d_below, d_offset_below, num_blocks);
-    gpu_scan(d_above, d_offset_above, num_blocks);
+    cudaMemcpy(d_offset_below, h_offset_below, num_blocks * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_offset_above, h_offset_above, num_blocks * sizeof(int), cudaMemcpyHostToDevice);
 
-    // 3. Compute total items < pivot
-    int total_below;
-    cudaMemcpy(&total_below, &d_offset_below[num_blocks - 1], sizeof(int), cudaMemcpyDeviceToHost);
-    int last_block_count;
-    cudaMemcpy(&last_block_count, &d_below[num_blocks - 1], sizeof(int), cudaMemcpyDeviceToHost);
-    total_below += last_block_count; // last prefix sum element + last block count
+    std::cout << "total_below = " << total_below << std::endl;
 
-    // 4. Reorder in-place
-    reorder_kernel<<<num_blocks, BLOCK_SIZE>>>(d_arr, d_offset_below, d_offset_above, n, pivot, total_below);
+    // 3. Reorder in-place
+    reorder_kernel<<<num_blocks, 2>>>(d_arr, d_offset_below, d_offset_above, n, pivot, total_below);
     cudaDeviceSynchronize();
 
     cudaMemcpy(arr, d_arr, n * sizeof(int), cudaMemcpyDeviceToHost);
+
+    std::cout << "Array after reordering: ";
+    for (size_t i = 0; i < n; i++) std::cout << arr[i] << " ";
+    std::cout << std::endl;
 
     cudaFree(d_arr);
     cudaFree(d_below);
