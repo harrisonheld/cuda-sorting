@@ -45,7 +45,9 @@ int main() {
     std::vector<int> sizes = {1 << 12, 1<< 14, 1 << 16, 1 << 18,1 << 20, 1 << 22, 1 << 24, 1 << 26, 1 << 28};
 
     std::vector<int> test_arr = {6, 5, 4, 2, 1, 0};
+    std::vector<int> test_arr_2 = {1, 2, 3, 10, 20, 5};
     test_sort_algorithm("Quick Sort", quick_sort, test_arr);
+    test_sort_algorithm("Quick Sort", quick_sort, test_arr_2);
     return 0;
 
     for (auto n : sizes) {

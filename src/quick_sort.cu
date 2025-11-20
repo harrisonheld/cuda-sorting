@@ -3,7 +3,7 @@
 #include <cstdlib> // for rand
 #include <iostream>
 
-#define BLOCK_SIZE 256
+#define BLOCK_SIZE 2
 
 // GPU kernel to count items < pivot and > pivot in each block
 __global__ void count_kernel(int* d_arr, int* below_arr, int* above_arr, size_t n, int pivot) {
@@ -54,7 +54,7 @@ __global__ void reorder_kernel(int* d_arr, int* offset_below, int* offset_above,
         int idx = atomicAdd(&offset_below[block_id], 1);
         d_arr[idx] = val;
     } else if (val > pivot) {
-        int idx = atomicAdd(&offset_above[block_id], 1) + total_below;
+        int idx = atomicAdd(&offset_above[block_id], 1);
         d_arr[idx] = val;
     }
 }
@@ -72,7 +72,8 @@ void quick_sort(int* arr, size_t n) {
     cudaMalloc(&d_arr, n * sizeof(int));
     cudaMemcpy(d_arr, arr, n * sizeof(int), cudaMemcpyHostToDevice);
 
-    int num_blocks = 3; // 3 blocks of 2 elements
+    int num_blocks = (n + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    std::cout << "num_blocks=" << num_blocks << std::endl;
 
     int* d_below;
     int* d_above;
@@ -80,7 +81,7 @@ void quick_sort(int* arr, size_t n) {
     cudaMalloc(&d_above, num_blocks * sizeof(int));
 
     // 1. Count items < pivot and > pivot per block
-    count_kernel<<<num_blocks, 2>>>(d_arr, d_below, d_above, n, pivot); // BLOCK_SIZE = 2
+    count_kernel<<<num_blocks, BLOCK_SIZE>>>(d_arr, d_below, d_above, n, pivot); // BLOCK_SIZE = 2
     cudaDeviceSynchronize();
 
     // Copy counts to host to print
@@ -119,7 +120,7 @@ void quick_sort(int* arr, size_t n) {
     std::cout << "total_below = " << total_below << std::endl;
 
     // 3. Reorder in-place
-    reorder_kernel<<<num_blocks, 2>>>(d_arr, d_offset_below, d_offset_above, n, pivot, total_below);
+    reorder_kernel<<<num_blocks, BLOCK_SIZE>>>(d_arr, d_offset_below, d_offset_above, n, pivot, total_below);
     cudaDeviceSynchronize();
 
     cudaMemcpy(arr, d_arr, n * sizeof(int), cudaMemcpyDeviceToHost);
