@@ -6,11 +6,11 @@
 #define ARR_LENGTH_MIN  128
 
 // __device__ means this code runs on the GPU and is callable from GPU code
-__device__ void sequential_device_sort(int* data, int left, int right)
+__device__ void sequential_device_sort(int* data, size_t left, size_t right)
 {
     for (size_t i = left + 1; i <= right; i++) {
         int key = data[i];
-        int j = i;
+        size_t j = i;
         while (j > left && data[j-1] > key) {
             data[j] = data[j-1];
             j--;
@@ -20,7 +20,7 @@ __device__ void sequential_device_sort(int* data, int left, int right)
 }
 
 // quicksort_kernel, to be used recursively
-__global__ void quicksort_kernel(int* data, int left, int right, int depth)
+__global__ void quicksort_kernel(int* data, size_t left, size_t right, int depth)
 {
     if (depth >= RECURSION_LIMIT || (right - left) <= ARR_LENGTH_MIN) {
         sequential_device_sort(data, left, right);
