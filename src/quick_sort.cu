@@ -1,153 +1,93 @@
-#include "sort_kernels.cuh"
 #include <cuda_runtime.h>
-#include <cstdlib> // for rand
 #include <iostream>
+#include <cstdlib>
 
-#define BLOCK_SIZE 2
+#define RECURSION_LIMIT 24
+#define ARR_LENGTH_MIN  128
 
-// GPU kernel to count items < pivot and > pivot in each block
-__global__ void count_kernel(int* d_arr, int* below_arr, int* above_arr, size_t n, int pivot) {
-    __shared__ int s_below[BLOCK_SIZE];
-    __shared__ int s_above[BLOCK_SIZE];
-
-    int tid = threadIdx.x;
-    int gid = blockIdx.x * blockDim.x + tid;
-
-    int below_count = 0;
-    int above_count = 0;
-
-    if (gid < n) {
-        int val = d_arr[gid];
-        if (val < pivot) below_count = 1;
-        else if (val > pivot) above_count = 1;
-    }
-
-    s_below[tid] = below_count;
-    s_above[tid] = above_count;
-    __syncthreads();
-
-    // Block-level reduction
-    for (int offset = blockDim.x / 2; offset > 0; offset >>= 1) {
-        if (tid < offset) {
-            s_below[tid] += s_below[tid + offset];
-            s_above[tid] += s_above[tid + offset];
+// __device__ means this code runs on the GPU and is callable from GPU code
+__device__ void sequential_device_sort(int* data, int left, int right)
+{
+    for (size_t i = left + 1; i <= right; i++) {
+        int key = data[i];
+        int j = i;
+        while (j > left && data[j-1] > key) {
+            data[j] = data[j-1];
+            j--;
         }
-        __syncthreads();
-    }
-
-    if (tid == 0) {
-        below_arr[blockIdx.x] = s_below[0];
-        above_arr[blockIdx.x] = s_above[0];
+        data[j] = key;
     }
 }
 
-// Kernel to reorder elements in-place based on offsets
-__global__ void reorder_kernel(int* d_arr, int* offset_below, int* offset_above, size_t n, int pivot, int total_below) {
-    int gid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (gid >= n) return;
+// quicksort_kernel, to be used recursively
+__global__ void quicksort_kernel(int* data, int left, int right, int depth)
+{
+    if (depth >= RECURSION_LIMIT || (right - left) <= ARR_LENGTH_MIN) {
+        sequential_device_sort(data, left, right);
+        return;
+    }
 
-    int val = d_arr[gid];
-    int block_id = blockIdx.x;
+    size_t pivot_idx = (left + right) / 2;
+    int pivot_val = data[pivot_idx];
 
-    // compute idx in-place using offsets
-    if (val < pivot) {
-        int idx = atomicAdd(&offset_below[block_id], 1);
-        d_arr[idx] = val;
-    } else if (val > pivot) {
-        int idx = atomicAdd(&offset_above[block_id], 1) + total_below;
-        d_arr[idx] = val;
+    int* start_ptr = data + left;
+    int* end_ptr   = data + right;
+
+    // partition around pivot
+    while (start_ptr <= end_ptr)
+    {
+        while (*start_ptr < pivot_val) start_ptr++;
+        while (*end_ptr > pivot_val) end_ptr--;
+
+        if (start_ptr <= end_ptr)
+        {
+            int tmp = *start_ptr;
+            *start_ptr = *end_ptr;
+            *end_ptr = tmp;
+
+            start_ptr++;
+            end_ptr--;
+        }
+    }
+
+    size_t left_limit  = end_ptr - data;
+    size_t right_start = start_ptr - data;
+
+    // recursive call for left partition
+    if (left < left_limit)
+    {
+        cudaStream_t left_stream;
+        cudaStreamCreateWithFlags(&left_stream, cudaStreamNonBlocking);
+        quicksort_kernel<<<1,1,0,left_stream>>>(data, left, left_limit, depth+1);
+        cudaStreamDestroy(left_stream);
+    }
+    // recursive call for right partition
+    if (right_start < right)
+    {
+        cudaStream_t right_stream;
+        cudaStreamCreateWithFlags(&right_stream, cudaStreamNonBlocking);
+        quicksort_kernel<<<1,1,0,right_stream>>>(data, right_start, right, depth+1);
+        cudaStreamDestroy(right_stream);
     }
 }
 
-void quick_sort(int* arr, size_t n) {
+
+void quick_sort(int* arr, size_t n)
+{
     if (n <= 1) return;
+    cudaDeviceSetLimit(cudaLimitDevRuntimeSyncDepth, RECURSION_LIMIT);
 
-    int pivot = 3; // hardcoded pivot for example
-
-    std::cout << "Original array: ";
-    for (size_t i = 0; i < n; i++) std::cout << arr[i] << " ";
-    std::cout << ", pivot = " << pivot << std::endl;
-
+    // copy to GPU
     int* d_arr;
     cudaMalloc(&d_arr, n * sizeof(int));
     cudaMemcpy(d_arr, arr, n * sizeof(int), cudaMemcpyHostToDevice);
 
-    int num_blocks = (n + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    std::cout << "num_blocks=" << num_blocks << std::endl;
-
-    int* d_below;
-    int* d_above;
-    cudaMalloc(&d_below, num_blocks * sizeof(int));
-    cudaMalloc(&d_above, num_blocks * sizeof(int));
-
-    // 1. Count items < pivot and > pivot per block
-    count_kernel<<<num_blocks, BLOCK_SIZE>>>(d_arr, d_below, d_above, n, pivot); // BLOCK_SIZE = 2
+    // launch recursive partition
+    quicksort_kernel<<<1,1>>>(d_arr, 0, (int)n - 1, 0);
     cudaDeviceSynchronize();
 
-    // Copy counts to host to print
-    int h_below[num_blocks], h_above[num_blocks];
-    cudaMemcpy(h_below, d_below, num_blocks * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_above, d_above, num_blocks * sizeof(int), cudaMemcpyDeviceToHost);
-
-    std::cout << "below_arr: ";
-    for (int i = 0; i < num_blocks; i++) std::cout << h_below[i] << " ";
-    std::cout << std::endl;
-
-    std::cout << "above_arr: ";
-    for (int i = 0; i < num_blocks; i++) std::cout << h_above[i] << " ";
-    std::cout << std::endl;
-
-    int* d_offset_below;
-    int* d_offset_above;
-    cudaMalloc(&d_offset_below, num_blocks * sizeof(int));
-    cudaMalloc(&d_offset_above, num_blocks * sizeof(int));
-
-    gpu_scan(d_below, d_offset_below, num_blocks);
-    gpu_scan(d_above, d_offset_above, num_blocks);
-
-    // Copy offsets back to host for printing / total calculation
-    int h_offset_below[num_blocks], h_offset_above[num_blocks];
-    cudaMemcpy(h_offset_below, d_offset_below, num_blocks * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_offset_above, d_offset_above, num_blocks * sizeof(int), cudaMemcpyDeviceToHost);
-
-    std::cout << "offset_below: ";
-    for (int i = 0; i < num_blocks; i++) std::cout << h_offset_below[i] << " ";
-    std::cout << std::endl;
-
-    std::cout << "offset_above: ";
-    for (int i = 0; i < num_blocks; i++) std::cout << h_offset_above[i] << " ";
-    std::cout << std::endl;
-
-    int last_below = 0;
-    cudaMemcpy(&last_below, &d_below[num_blocks-1], sizeof(int), cudaMemcpyDeviceToHost);
-
-    int total_below = 0;
-    cudaMemcpy(&total_below, &d_offset_below[num_blocks-1], sizeof(int), cudaMemcpyDeviceToHost);
-    total_below += last_below;  // total number of elements < pivot
-
-    // same for above
-    int last_above = 0;
-    cudaMemcpy(&last_above, &d_above[num_blocks-1], sizeof(int), cudaMemcpyDeviceToHost);
-
-    int total_above = 0;
-    cudaMemcpy(&total_above, &d_offset_above[num_blocks-1], sizeof(int), cudaMemcpyDeviceToHost);
-    total_above += last_above;  // total number of elements > pivot
-
-    std::cout << "total_below = " << total_below << std::endl;
-
-    // 3. Reorder in-place
-    reorder_kernel<<<num_blocks, BLOCK_SIZE>>>(d_arr, d_offset_below, d_offset_above, n, pivot, total_below);
-    cudaDeviceSynchronize();
-
+    // copy sorted from GPU onto CPU
+    // free memory off GPU
     cudaMemcpy(arr, d_arr, n * sizeof(int), cudaMemcpyDeviceToHost);
-
-    std::cout << "Array after reordering: ";
-    for (size_t i = 0; i < n; i++) std::cout << arr[i] << " ";
-    std::cout << std::endl;
-
     cudaFree(d_arr);
-    cudaFree(d_below);
-    cudaFree(d_above);
-    cudaFree(d_offset_below);
-    cudaFree(d_offset_above);
 }

@@ -1,5 +1,5 @@
 NVCC = nvcc
-CFLAGS = -O3 -std=c++17
+NVCCFLAGS = -O3 -std=c++17 -rdc=true
 
 SRC = src
 INC = include
@@ -16,11 +16,11 @@ $(BIN):
 
 # Compile
 $(BIN)/%.o: $(SRC)/%.cu | $(BIN)
-	$(NVCC) $(CFLAGS) -I$(INC) -c $< -o $@
+	$(NVCC) $(NVCCFLAGS) -I$(INC) -c $< -o $@
 
 # Link
 $(TARGET): $(OBJECTS) | $(BIN)
-	$(NVCC) $(CFLAGS) $^ -o $@
+	$(NVCC) $(NVCCFLAGS) $^ -o $@ -lcudadevrt
 
 run: $(TARGET)
 	./$(TARGET)
