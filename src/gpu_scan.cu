@@ -61,7 +61,7 @@ __global__ void add_offsets(int* out, int* block_offsets, size_t n) {
 }
 
 void gpu_scan(int* d_in, int* d_out, size_t n) {
-    int blockSize = 512;
+    int blockSize = 256;
     int gridSize = (n + blockSize - 1) / blockSize;
 
     int* d_block_sums;

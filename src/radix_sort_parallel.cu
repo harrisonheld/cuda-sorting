@@ -46,7 +46,7 @@ void radix_sort_parallel(int* arr, size_t n) {
     cudaMemcpy(d_in, arr, n * sizeof(int), cudaMemcpyHostToDevice);
 
     int max_bits = sizeof(int) * 8;
-    int blockSize = 512;
+    int blockSize = 256;
     int gridSize = (n + blockSize - 1) / blockSize;
 
     for (int bit = 0; bit < max_bits; bit++) {
