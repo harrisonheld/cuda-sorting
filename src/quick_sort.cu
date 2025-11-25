@@ -20,6 +20,7 @@ __device__ void sequential_device_sort(int* data, size_t left, size_t right)
 }
 
 // quicksort_kernel, to be used recursively
+// again recursion is really inefficient on CUDA but it is basically necessary for quicksort
 __global__ void quicksort_kernel(int* data, size_t left, size_t right, int depth)
 {
     if (depth >= RECURSION_LIMIT || (right - left) <= ARR_LENGTH_MIN) {

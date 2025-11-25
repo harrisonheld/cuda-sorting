@@ -19,7 +19,7 @@ __global__ void odd_even_kernel(int* arr, size_t n, int phase, bool* d_swapped) 
     }
 }
 
-// expect O(n) time
+// O(n) time, O(n^2) work
 void brick_sort(int* arr, size_t n) {
     if (n < 2) return;
 

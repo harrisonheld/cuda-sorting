@@ -42,14 +42,23 @@ int main() {
     // print csv header
     std::cout << "Size,Algorithm,Time(s),Result\n";
 
-    std::vector<int> sizes = {1 << 12, 1<< 14, 1 << 16, 1 << 18,1 << 20, 1 << 22, 1 << 24, 1 << 26, 1 << 28};
+    std::vector<int> sizes = {};
+    for(int n = 9; n <= 20; n++) {
+        sizes.push_back(1 << n);
+    }
 
     for (auto n : sizes) {
         std::vector<int> arr(n);
         for (int i = 0; i < n; ++i) 
             arr[i] = rand() % 100000;
 
+        test_sort_algorithm("CPU std::sort", cpu_sort, arr);
+        test_sort_algorithm("Merge Sort", merge_sort, arr);
         test_sort_algorithm("Quick Sort", quick_sort, arr);
+        test_sort_algorithm("Radix Sort Sequential", radix_sort_sequential, arr);
+        test_sort_algorithm("Radix Sort Parallel", radix_sort_parallel, arr);
+        test_sort_algorithm("Bitonic Sort", bitonic_sort, arr);
+        test_sort_algorithm("Brick Sort", brick_sort, arr);
     }
 
     return 0;
