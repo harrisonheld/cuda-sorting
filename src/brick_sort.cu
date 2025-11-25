@@ -3,19 +3,33 @@
 
 #define THREADS 256
 
-__global__ void odd_even_kernel(int* arr, size_t n, int phase, bool* d_swapped) {
+__global__ void odd_phase(int* A, size_t n, bool* d_found) {
     size_t i = blockIdx.x * blockDim.x + threadIdx.x;
 
-    // Odd phase: start = 1, Even phase: start = 0
-    size_t idx = 2 * i + phase;
-    if (idx + 1 >= n) return;
+    // j = 1, 3, 5, ...  (0-indexed → j = 0+1 = 1)
+    size_t j = 2 * i + 1;
+    if (j + 1 >= n) return;
 
-    int a = arr[idx];
-    int b = arr[idx + 1];
-    if (a > b) {
-        arr[idx] = b;
-        arr[idx + 1] = a;
-        *d_swapped = true;
+    if (A[j] > A[j + 1]) {
+        int tmp = A[j];
+        A[j] = A[j + 1];
+        A[j + 1] = tmp;
+        *d_found = true;
+    }
+}
+
+__global__ void even_phase(int* A, size_t n, bool* d_found) {
+    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // j = 2, 4, 6, ...  (0-indexed → j = 0)
+    size_t j = 2 * i;
+    if (j + 1 >= n) return;
+
+    if (A[j] > A[j + 1]) {
+        int tmp = A[j];
+        A[j] = A[j + 1];
+        A[j + 1] = tmp;
+        *d_found = true;
     }
 }
 
@@ -24,31 +38,36 @@ void brick_sort(int* arr, size_t n) {
     if (n < 2) return;
 
     int* d_arr;
-    bool* d_swapped;
+    bool* d_found;
     cudaMalloc(&d_arr, n * sizeof(int));
-    cudaMalloc(&d_swapped, sizeof(bool));
-
+    cudaMalloc(&d_found, sizeof(bool));
     cudaMemcpy(d_arr, arr, n * sizeof(int), cudaMemcpyHostToDevice);
 
-    size_t blocks = (n + THREADS - 1) / (2 * THREADS);
+    // number of pairs:
+    // odd phase handles ceil((n-1)/2)
+    // even phase handles floor((n)/2)
+    size_t pairs = (n + 1) / 2;
+    size_t blocks = (pairs + THREADS - 1) / THREADS;
 
-    bool h_swapped = true;
-    while (h_swapped) {
-        h_swapped = false;
-        cudaMemcpy(d_swapped, &h_swapped, sizeof(bool), cudaMemcpyHostToDevice);
+    bool h_found = true;
 
-        // odd indices (1, 3, 5, ...)
-        odd_even_kernel<<<blocks, THREADS>>>(d_arr, n, 1, d_swapped);
+    while (h_found) {
+        h_found = false;
+        cudaMemcpy(d_found, &h_found, sizeof(bool), cudaMemcpyHostToDevice);
+
+        // forall odd j in parallel
+        odd_phase<<<blocks, THREADS>>>(d_arr, n, d_found);
         cudaDeviceSynchronize();
 
-        // even indices (0, 2, 4, ...)
-        odd_even_kernel<<<blocks, THREADS>>>(d_arr, n, 0, d_swapped);
+        // forall even j in parallel
+        even_phase<<<blocks, THREADS>>>(d_arr, n, d_found);
         cudaDeviceSynchronize();
 
-        cudaMemcpy(&h_swapped, d_swapped, sizeof(bool), cudaMemcpyDeviceToHost);
+        // check if any swap occurred
+        cudaMemcpy(&h_found, d_found, sizeof(bool), cudaMemcpyDeviceToHost);
     }
 
     cudaMemcpy(arr, d_arr, n * sizeof(int), cudaMemcpyDeviceToHost);
     cudaFree(d_arr);
-    cudaFree(d_swapped);
+    cudaFree(d_found);
 }
