@@ -1,12 +1,10 @@
 #include "sort_kernels.cuh"
 #include <cuda_runtime.h>
 
-#define THREADS 256
-
 __global__ void odd_phase(int* A, size_t n, bool* d_found) {
     size_t i = blockIdx.x * blockDim.x + threadIdx.x;
 
-    // j = 1, 3, 5, ...  (0-indexed → j = 0+1 = 1)
+    // j = 1, 3, 5, ... 
     size_t j = 2 * i + 1;
     if (j + 1 >= n) return;
 
@@ -21,7 +19,7 @@ __global__ void odd_phase(int* A, size_t n, bool* d_found) {
 __global__ void even_phase(int* A, size_t n, bool* d_found) {
     size_t i = blockIdx.x * blockDim.x + threadIdx.x;
 
-    // j = 2, 4, 6, ...  (0-indexed → j = 0)
+    // j = 2, 4, 6, ...
     size_t j = 2 * i;
     if (j + 1 >= n) return;
 
@@ -37,6 +35,8 @@ __global__ void even_phase(int* A, size_t n, bool* d_found) {
 void brick_sort(int* arr, size_t n) {
     if (n < 2) return;
 
+    int threads = 256;
+
     int* d_arr;
     bool* d_found;
     cudaMalloc(&d_arr, n * sizeof(int));
@@ -47,7 +47,7 @@ void brick_sort(int* arr, size_t n) {
     // odd phase handles ceil((n-1)/2)
     // even phase handles floor((n)/2)
     size_t pairs = (n + 1) / 2;
-    size_t blocks = (pairs + THREADS - 1) / THREADS;
+    size_t blocks = (pairs + threads - 1) / threads;
 
     bool h_found = true;
 
@@ -56,11 +56,11 @@ void brick_sort(int* arr, size_t n) {
         cudaMemcpy(d_found, &h_found, sizeof(bool), cudaMemcpyHostToDevice);
 
         // forall odd j in parallel
-        odd_phase<<<blocks, THREADS>>>(d_arr, n, d_found);
+        odd_phase<<<blocks, threads>>>(d_arr, n, d_found);
         cudaDeviceSynchronize();
 
         // forall even j in parallel
-        even_phase<<<blocks, THREADS>>>(d_arr, n, d_found);
+        even_phase<<<blocks, threads>>>(d_arr, n, d_found);
         cudaDeviceSynchronize();
 
         // check if any swap occurred
